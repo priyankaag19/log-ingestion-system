@@ -24,7 +24,6 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters, onLogAdded }) => {
   });
   const [error, setError] = useState(null);
 
-  // Handle search term changes with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
       onFilterChange('message', searchTerm);
@@ -32,7 +31,6 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters, onLogAdded }) => {
     return () => clearTimeout(timer);
   }, [searchTerm, onFilterChange]);
 
-  // Reset form when filters are cleared
   useEffect(() => {
     const allFiltersEmpty = Object.values(filters).every((v) => v === '');
     if (allFiltersEmpty) {
@@ -87,8 +85,12 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters, onLogAdded }) => {
         }
       };
 
-      await ingestLog(payload);
-      if (onLogAdded) onLogAdded();
+      const newLog = await ingestLog(payload);
+
+      if (onLogAdded) {
+        onLogAdded(newLog || payload);
+      }
+
       resetForm();
     } catch (err) {
       setError(err.message || 'Failed to add log.');

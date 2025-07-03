@@ -1,17 +1,5 @@
 [
   {
-    "timestamp": "2023-09-15T08:00:00Z",
-    "level": "error",
-    "traceId": "abc-xyz-123",
-    "resourceId": "server-1234",
-    "metadata": {
-      "parentResourceId": "server-5678"
-    },
-    "commit": "5e5342f",
-    "message": "Failed to connect to database",
-    "spanId": "span-456"
-  },
-  {
     "timestamp": "2025-07-03T16:49:53.368Z",
     "level": "info",
     "traceId": "trace-12345",
@@ -22,17 +10,5 @@
     "commit": "abc123def",
     "message": "Sample log entry added from UI",
     "spanId": "span-7890"
-  },
-  {
-    "level": "error",
-    "message": "New Sample Added",
-    "resourceId": "server-7476",
-    "timestamp": "2025-07-04T07:30:00.000Z",
-    "traceId": "hjd-hfg-287",
-    "spanId": "span-848",
-    "commit": "7h4g9j",
-    "metadata": {
-      "parentResourceId": "server-7476"
-    }
   }
 ]

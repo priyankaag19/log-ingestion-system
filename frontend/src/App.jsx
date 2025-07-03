@@ -31,7 +31,6 @@ function App() {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
 
-  // Load logs with optional query parameters
   const loadLogs = useCallback(async (queryParams = {}) => {
     setLoading(true);
     setError(null);
@@ -48,7 +47,6 @@ function App() {
     }
   }, []);
 
-  // Apply filters and fetch filtered logs
   const applyFilters = useCallback(async () => {
     const queryParams = {};
 
@@ -87,6 +85,12 @@ function App() {
     loadLogs();
   }, [loadLogs]);
 
+  const handleLogAdded = useCallback((newLog) => {
+    // Add the new log to the top of the list
+    setLogs(prev => [newLog, ...prev]);
+    setFilteredLogs(prev => [newLog, ...prev]);
+  }, []);
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
@@ -112,7 +116,7 @@ function App() {
           filters={filters}
           onFilterChange={handleFilterChange}
           onClearFilters={handleClearFilters}
-          onLogAdded={handleRefresh}
+          onLogAdded={handleLogAdded}
         />
 
         {/* Error Alert */}
