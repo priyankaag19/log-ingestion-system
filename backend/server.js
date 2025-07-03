@@ -228,7 +228,6 @@ app.use((req, res) => {
   });
 });
 
-
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
