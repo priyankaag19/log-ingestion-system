@@ -24,15 +24,15 @@
     "spanId": "span-7890"
   },
   {
-    "timestamp": "2025-07-03T17:07:31.794Z",
-    "level": "info",
-    "traceId": "trace-12345",
-    "resourceId": "server-7890",
+    "level": "error",
+    "message": "New Sample Added",
+    "resourceId": "server-7476",
+    "timestamp": "2025-07-04T07:30:00.000Z",
+    "traceId": "hjd-hfg-287",
+    "spanId": "span-848",
+    "commit": "7h4g9j",
     "metadata": {
-      "parentResourceId": "server-1234"
-    },
-    "commit": "abc123def",
-    "message": "Sample log entry added from UI",
-    "spanId": "span-7890"
+      "parentResourceId": "server-7476"
+    }
   }
 ]

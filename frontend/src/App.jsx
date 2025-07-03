@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Box, Typography, Button, Paper, Stack, Alert, CircularProgress, Chip } from '@mui/material';
+import {
+  Container,
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Stack,
+  Alert,
+  CircularProgress,
+  Chip
+} from '@mui/material';
 import FilterBar from './components/FilterBar';
 import LogList from './components/LogList';
-import { fetchLogs, ingestLog } from './services/api';
+import { fetchLogs } from './services/api';
 
 function App() {
   const [logs, setLogs] = useState([]);
@@ -13,8 +23,7 @@ function App() {
     level: '',
     message: '',
     resourceId: '',
-    timestamp_start: '',
-    timestamp_end: '',
+    timestamp: '',
     traceId: '',
     spanId: '',
     commit: ''
@@ -75,8 +84,7 @@ function App() {
       level: '',
       message: '',
       resourceId: '',
-      timestamp_start: '',
-      timestamp_end: '',
+      timestamp: '',
       traceId: '',
       spanId: '',
       commit: ''
@@ -85,27 +93,6 @@ function App() {
 
   const handleRefresh = () => {
     loadLogs();
-  };
-
-  const handleAddSampleLog = async () => {
-    const newLog = {
-      timestamp: new Date().toISOString(),
-      level: 'info',
-      traceId: 'trace-12345',
-      resourceId: 'server-7890',
-      metadata: { parentResourceId: 'server-1234' },
-      commit: 'abc123def',
-      message: 'Sample log entry added from UI',
-      spanId: 'span-7890'
-    };
-
-    try {
-      await ingestLog(newLog);
-      await loadLogs();
-    } catch (err) {
-      console.error('Error adding log:', err);
-      setError(err.message || 'Failed to add log.');
-    }
   };
 
   return (
@@ -125,20 +112,18 @@ function App() {
               <Button variant="outlined" onClick={handleRefresh}>
                 🔄 Refresh
               </Button>
-              <Button variant="outlined" color="success" onClick={handleAddSampleLog}>
-                ➕ Add Sample Log
-              </Button>
             </Stack>
           </Box>
         </Container>
       </Paper>
 
-      {/* Main */}
+      {/* Main Content */}
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <FilterBar
           filters={filters}
           onFilterChange={handleFilterChange}
           onClearFilters={handleClearFilters}
+          onLogAdded={loadLogs}
         />
 
         {/* Error Alert */}
@@ -148,7 +133,7 @@ function App() {
           </Alert>
         )}
 
-        {/* Loading */}
+        {/* Loading Spinner or Log List */}
         {loading ? (
           <Box display="flex" justifyContent="center" mt={4}>
             <CircularProgress />

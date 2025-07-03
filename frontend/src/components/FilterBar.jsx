@@ -1,16 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, TextField, InputAdornment, IconButton, Button, Typography, Paper } from '@mui/material';
+import {
+  Grid,
+  TextField,
+  InputAdornment,
+  Button,
+  Typography,
+  Paper,
+  Alert
+} from '@mui/material';
 import { FiSearch } from 'react-icons/fi';
+import { ingestLog } from '../services/api';
 
-const FilterBar = ({ filters, onFilterChange, onClearFilters }) => {
+const FilterBar = ({ filters, onFilterChange, onClearFilters, onLogAdded }) => {
   const [searchTerm, setSearchTerm] = useState(filters.message || '');
-
-  const formatDateTimeLocal = (isoString) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    if (isNaN(date)) return '';
-    return date.toISOString().slice(0, 16);
-  };
+  const [formData, setFormData] = useState({
+    level: '',
+    message: '',
+    resourceId: '',
+    timestamp: '',
+    traceId: '',
+    spanId: '',
+    commit: ''
+  });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -20,14 +32,58 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters }) => {
   }, [searchTerm, onFilterChange]);
 
   const handleInputChange = (field, value) => {
-    if (field === 'message') {
-      setSearchTerm(value);
-    } else {
-      onFilterChange(field, value);
-    }
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const formatDateTimeLocal = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    if (isNaN(date)) return '';
+    return date.toISOString().slice(0, 16);
   };
 
   const hasActiveFilters = Object.values(filters).some((v) => v && v.trim() !== '');
+
+  const handleSubmit = async () => {
+    const requiredFields = ['level', 'resourceId', 'timestamp', 'traceId', 'spanId', 'commit'];
+    const emptyField = requiredFields.find(field => !formData[field] || formData[field].trim() === '');
+    if (emptyField) {
+      setError(`Please fill out the "${emptyField}" field.`);
+      return;
+    }
+
+    try {
+      const payload = {
+        ...formData,
+        timestamp: new Date(formData.timestamp).toISOString(),
+        message: formData.message || 'New Sample Added',
+        metadata: {
+          parentResourceId: formData.resourceId || 'unknown-parent',
+        }
+      };
+
+      await ingestLog(payload);
+      if (onLogAdded) onLogAdded();
+      useEffect(() => {
+        const allEmpty = Object.values(filters).every((v) => v === '');
+        if (allEmpty) {
+          setFormData({
+            level: '',
+            message: '',
+            resourceId: '',
+            timestamp: '',
+            traceId: '',
+            spanId: '',
+            commit: ''
+          });
+          setSearchTerm('');
+        }
+      }, [filters]);
+      setError(null);
+    } catch (err) {
+      setError(err.message || 'Failed to add log.');
+    }
+  };
 
   return (
     <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
@@ -40,14 +96,20 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters }) => {
         )}
       </Grid>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <Grid container spacing={2}>
-        {/* Search Message */}
+        {/* Message Search */}
         <Grid item xs={12} sm={6} md={4} lg={3}>
           <TextField
             fullWidth
             label="Search Message"
-            value={filters.message}
-            onChange={(e) => handleInputChange('message', e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search in log messages..."
             InputProps={{
               startAdornment: (
@@ -59,17 +121,15 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters }) => {
           />
         </Grid>
 
-        {/* Level Filter */}
+        {/* Level */}
         <Grid item xs={12} sm={6} md={4} lg={3}>
           <TextField
             fullWidth
             select
             placeholder="Level"
-            value={filters.level}
+            value={formData.level}
             onChange={(e) => handleInputChange('level', e.target.value)}
-            SelectProps={{
-              native: true,
-            }}
+            SelectProps={{ native: true }}
           >
             <option value="">All Levels</option>
             <option value="error">Error</option>
@@ -79,42 +139,25 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters }) => {
           </TextField>
         </Grid>
 
-
         {/* Resource ID */}
         <Grid item xs={12} sm={6} md={4} lg={3}>
           <TextField
             fullWidth
             label="Resource ID"
-            value={filters.resourceId}
-            onChange={(e) => handleInputChange('resourceId', e.target.value)}
             placeholder="e.g., server-1234"
+            value={formData.resourceId}
+            onChange={(e) => handleInputChange('resourceId', e.target.value)}
           />
         </Grid>
 
-        {/* Timestamp Start */}
+        {/* Timestamp */}
         <Grid item xs={12} sm={6} md={4} lg={3}>
           <TextField
             fullWidth
             type="datetime-local"
-            label="From Date"
-            value={formatDateTimeLocal(filters.timestamp_start)}
-            onChange={(e) =>
-              handleInputChange('timestamp_start', e.target.value ? new Date(e.target.value).toISOString() : '')
-            }
-            InputLabelProps={{ shrink: true }}
-          />
-        </Grid>
-
-        {/* Timestamp End */}
-        <Grid item xs={12} sm={6} md={4} lg={3}>
-          <TextField
-            fullWidth
-            type="datetime-local"
-            label="To Date"
-            value={formatDateTimeLocal(filters.timestamp_end)}
-            onChange={(e) =>
-              handleInputChange('timestamp_end', e.target.value ? new Date(e.target.value).toISOString() : '')
-            }
+            label="Timestamp"
+            value={formData.timestamp}
+            onChange={(e) => handleInputChange('timestamp', e.target.value)}
             InputLabelProps={{ shrink: true }}
           />
         </Grid>
@@ -124,9 +167,9 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters }) => {
           <TextField
             fullWidth
             label="Trace ID"
-            value={filters.traceId}
-            onChange={(e) => handleInputChange('traceId', e.target.value)}
             placeholder="e.g., abc-xyz-123"
+            value={formData.traceId}
+            onChange={(e) => handleInputChange('traceId', e.target.value)}
           />
         </Grid>
 
@@ -135,23 +178,32 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters }) => {
           <TextField
             fullWidth
             label="Span ID"
-            value={filters.spanId}
-            onChange={(e) => handleInputChange('spanId', e.target.value)}
+            value={formData.spanId}
             placeholder="e.g., span-456"
+            onChange={(e) => handleInputChange('spanId', e.target.value)}
           />
         </Grid>
 
-        {/* Commit Hash */}
+        {/* Commit */}
         <Grid item xs={12} sm={6} md={4} lg={3}>
           <TextField
             fullWidth
             label="Commit Hash"
-            value={filters.commit}
-            onChange={(e) => handleInputChange('commit', e.target.value)}
+            value={formData.commit}
             placeholder="e.g., 5e5342f"
+            onChange={(e) => handleInputChange('commit', e.target.value)}
           />
         </Grid>
       </Grid>
+
+      <Button
+        sx={{ mt: 3 }}
+        variant="contained"
+        color="primary"
+        onClick={handleSubmit}
+      >
+        Submit Log
+      </Button>
     </Paper>
   );
 };
