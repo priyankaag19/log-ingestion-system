@@ -24,6 +24,7 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters, onLogAdded }) => {
   });
   const [error, setError] = useState(null);
 
+  // Handle search term changes with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
       onFilterChange('message', searchTerm);
@@ -31,22 +32,46 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters, onLogAdded }) => {
     return () => clearTimeout(timer);
   }, [searchTerm, onFilterChange]);
 
+  // Reset form when filters are cleared
+  useEffect(() => {
+    const allFiltersEmpty = Object.values(filters).every((v) => v === '');
+    if (allFiltersEmpty) {
+      setFormData({
+        level: '',
+        message: '',
+        resourceId: '',
+        timestamp: '',
+        traceId: '',
+        spanId: '',
+        commit: ''
+      });
+      setSearchTerm('');
+    }
+  }, [filters]);
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const formatDateTimeLocal = (isoString) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    if (isNaN(date)) return '';
-    return date.toISOString().slice(0, 16);
-  };
-
   const hasActiveFilters = Object.values(filters).some((v) => v && v.trim() !== '');
+
+  const resetForm = () => {
+    setFormData({
+      level: '',
+      message: '',
+      resourceId: '',
+      timestamp: '',
+      traceId: '',
+      spanId: '',
+      commit: ''
+    });
+    setError(null);
+  };
 
   const handleSubmit = async () => {
     const requiredFields = ['level', 'resourceId', 'timestamp', 'traceId', 'spanId', 'commit'];
     const emptyField = requiredFields.find(field => !formData[field] || formData[field].trim() === '');
+
     if (emptyField) {
       setError(`Please fill out the "${emptyField}" field.`);
       return;
@@ -64,22 +89,7 @@ const FilterBar = ({ filters, onFilterChange, onClearFilters, onLogAdded }) => {
 
       await ingestLog(payload);
       if (onLogAdded) onLogAdded();
-      useEffect(() => {
-        const allEmpty = Object.values(filters).every((v) => v === '');
-        if (allEmpty) {
-          setFormData({
-            level: '',
-            message: '',
-            resourceId: '',
-            timestamp: '',
-            traceId: '',
-            spanId: '',
-            commit: ''
-          });
-          setSearchTerm('');
-        }
-      }, [filters]);
-      setError(null);
+      resetForm();
     } catch (err) {
       setError(err.message || 'Failed to add log.');
     }

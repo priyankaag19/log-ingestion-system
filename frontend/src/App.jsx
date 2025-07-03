@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Box,
@@ -14,34 +14,30 @@ import FilterBar from './components/FilterBar';
 import LogList from './components/LogList';
 import { fetchLogs } from './services/api';
 
+const INITIAL_FILTERS = {
+  level: '',
+  message: '',
+  resourceId: '',
+  timestamp: '',
+  traceId: '',
+  spanId: '',
+  commit: ''
+};
+
 function App() {
   const [logs, setLogs] = useState([]);
   const [filteredLogs, setFilteredLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    level: '',
-    message: '',
-    resourceId: '',
-    timestamp: '',
-    traceId: '',
-    spanId: '',
-    commit: ''
-  });
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
 
-  useEffect(() => {
-    loadLogs();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [filters, logs]);
-
-  const loadLogs = async () => {
+  // Load logs with optional query parameters
+  const loadLogs = useCallback(async (queryParams = {}) => {
     setLoading(true);
     setError(null);
+
     try {
-      const response = await fetchLogs();
+      const response = await fetchLogs(queryParams);
       setLogs(response);
       setFilteredLogs(response);
     } catch (err) {
@@ -50,99 +46,92 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const applyFilters = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const queryParams = {};
-      Object.keys(filters).forEach(key => {
-        if (filters[key] && filters[key].trim() !== '') {
-          queryParams[key] = filters[key];
-        }
-      });
-      const response = await fetchLogs(queryParams);
-      setFilteredLogs(response);
-    } catch (err) {
-      setError('Failed to filter logs. Please try again.');
-      console.error('Error filtering logs:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Apply filters and fetch filtered logs
+  const applyFilters = useCallback(async () => {
+    const queryParams = {};
 
-  const handleFilterChange = (filterName, value) => {
+    // Build query params from active filters
+    Object.keys(filters).forEach(key => {
+      if (filters[key] && filters[key].trim() !== '') {
+        queryParams[key] = filters[key];
+      }
+    });
+
+    await loadLogs(queryParams);
+  }, [filters, loadLogs]);
+
+  // Initial load
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
+
+  // Apply filters when they change
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  const handleFilterChange = useCallback((filterName, value) => {
     setFilters(prev => ({
       ...prev,
       [filterName]: value
     }));
-  };
+  }, []);
 
-  const handleClearFilters = () => {
-    setFilters({
-      level: '',
-      message: '',
-      resourceId: '',
-      timestamp: '',
-      traceId: '',
-      spanId: '',
-      commit: ''
-    });
-  };
+  const handleClearFilters = useCallback(() => {
+    setFilters(INITIAL_FILTERS);
+  }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     loadLogs();
-  };
+  }, [loadLogs]);
 
   return (
-    <Box minHeight="100vh" bgcolor="grey.100">
+    <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
-      <Paper elevation={1} square>
-        <Container maxWidth="lg">
-          <Box display="flex" justifyContent="space-between" alignItems="center" py={3}>
-            <Box display="flex" alignItems="center" gap={2}>
-              <Typography variant="h5" fontWeight={600}>
-                Log Viewer
-              </Typography>
-              <Chip label={`${filteredLogs.length} logs`} color="primary" size="small" />
-            </Box>
-
-            <Stack direction="row" spacing={2}>
-              <Button variant="outlined" onClick={handleRefresh}>
-                🔄 Refresh
-              </Button>
-            </Stack>
-          </Box>
-        </Container>
+      <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="h4" component="h1">
+            📊 Log Viewer
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={handleRefresh}
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={16} /> : null}
+          >
+            🔄 Refresh
+          </Button>
+        </Stack>
       </Paper>
 
       {/* Main Content */}
-      <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Stack spacing={3}>
         <FilterBar
           filters={filters}
           onFilterChange={handleFilterChange}
           onClearFilters={handleClearFilters}
-          onLogAdded={loadLogs}
+          onLogAdded={handleRefresh}
         />
 
         {/* Error Alert */}
         {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
         {/* Loading Spinner or Log List */}
         {loading ? (
-          <Box display="flex" justifyContent="center" mt={4}>
+          <Box display="flex" justifyContent="center" py={4}>
             <CircularProgress />
           </Box>
         ) : (
           <LogList logs={filteredLogs} />
         )}
-      </Container>
-    </Box>
+      </Stack>
+    </Container>
   );
 }
 
